@@ -12,6 +12,7 @@
 #define FILE_RAIL_LENGTH_LINE 1
 #define FILE_NUM_CONNECTIONS_LINE 2
 #define FILE_CONNECTIONS_TYPE_LINE 3
+#define TOKEN_LENGTH 1
 
 #define USAGE_ERROR "Usage: RailWayPlanner <InputFile>"
 #define FILE_EXIST_ERROR "File doesn't exists."
@@ -32,7 +33,7 @@ typedef struct RailWayPlanner
 {
     int length;
     int numConnections;
-    char connectionsAllowed[];
+    char *connectionsAllowed;
 }RailWayPlanner;
 
 FILE *getFile(const char *fileLocation, char *type)
@@ -85,6 +86,25 @@ int stringToInt(const char line[])
     return atoi(line);
 }
 
+int getRailConnections(char line[], const int numConnections, char *connections)
+{
+    char *token = strtok(line, ",");
+    int curr = 0;
+
+    while (token != NULL)
+    {
+        if (strlen(token) != TOKEN_LENGTH)
+        {
+            return FAILED_COMMAND;
+        }
+        connections[curr] = *token;
+        curr++;
+        token = strtok(0, ",");
+    }
+
+    return NO_ERROR;
+}
+
 void getUserData(const char *fileLocation)
 {
     FILE *file = getFile(fileLocation, READ_FILE);
@@ -117,7 +137,13 @@ void getUserData(const char *fileLocation)
         }
         else if (lineNumber == FILE_CONNECTIONS_TYPE_LINE)
         {
-            continue;
+            char *connections = (char *)malloc(rail.numConnections * sizeof(char));
+            if (getRailConnections(line, rail.numConnections, connections) == FAILED_COMMAND)
+            {
+                writeToFile(INVALID_INPUT_ERROR);
+                lineError = FILE_CONNECTIONS_TYPE_LINE;
+            }
+            rail.connectionsAllowed = connections;
         }
         else
         {
@@ -125,6 +151,7 @@ void getUserData(const char *fileLocation)
         }
         lineNumber ++;
     }
+    printf("%s", rail.connectionsAllowed);
     fclose(file);
 }
 
