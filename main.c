@@ -12,21 +12,25 @@
 #define FILE_RAIL_LENGTH_LINE 1
 #define FILE_NUM_CONNECTIONS_LINE 2
 #define FILE_CONNECTIONS_TYPE_LINE 3
+#define PIECE_LEFT_CONNECTION_LOC 1
+#define PIECE_RIGHT_CONNECTION_LOC 2
+#define PIECE_QUANTITY_LOC 3
+#define PIECE_PRICE_LOC 4
 #define TOKEN_LENGTH 1
 
 #define USAGE_ERROR "Usage: RailWayPlanner <InputFile>"
 #define FILE_EXIST_ERROR "File doesn't exists."
-#define FILE_EMPTY_ERROR "File is empty."
+#define FILE_EMPTY_ERROR "File is empty." //TODO: TAKE CARE
 #define INVALID_INPUT_ERROR "Invalid input in line: %d" //TODO: Check if lond is needed
-#define FAILED_COMMAND -1
+#define STRING_INT_CONVERSION_ERROR -1
 #define NO_ERROR 0
 
 typedef struct Piece
 {
     int price;
-    int length;
-    char rightConnection[MAX_LINE_LEN];
-    char leftConnection[MAX_LINE_LEN];
+    int quantity;
+    char rightConnection;
+    char leftConnection;
 }Piece;
 
 typedef struct RailWayPlanner
@@ -34,6 +38,8 @@ typedef struct RailWayPlanner
     int length;
     int numConnections;
     char *connectionsAllowed;
+    Piece *pieces;
+    int numPieces;
 }RailWayPlanner;
 
 FILE *getFile(const char *fileLocation, char *type)
@@ -80,13 +86,13 @@ int stringToInt(const char line[])
     {
         if (line[i] < '0' || line[i] > '9')
         {
-            return FAILED_COMMAND;
+            return STRING_INT_CONVERSION_ERROR;
         }
     }
     return atoi(line);
 }
 
-int getRailConnections(char line[], const int numConnections, char *connections)
+int getRailConnections(char line[], char *connections)
 {
     char *token = strtok(line, ",");
     int curr = 0;
@@ -95,11 +101,70 @@ int getRailConnections(char line[], const int numConnections, char *connections)
     {
         if (strlen(token) != TOKEN_LENGTH)
         {
-            return FAILED_COMMAND;
+            return EXIT_FAILURE;
         }
         connections[curr] = *token;
         curr++;
         token = strtok(0, ",");
+    }
+
+    return NO_ERROR;
+}
+
+bool checkConnection(const char *connection, const char *allowedConnections)
+{
+    for (int i = 0; i < strlen(allowedConnections); i++)
+    {
+        if (*connection == allowedConnections[i])
+        {
+            return true;
+        }
+    }
+    return false;
+}
+
+int getPiece(char line[], Piece *pieces, const int loc, const char *allowedConnections)
+{
+    char *token = strtok(line, ",");
+    int curr = 1;
+
+    while (token != NULL)
+    {
+        if (curr == PIECE_LEFT_CONNECTION_LOC)
+        {
+            if (checkConnection(token, allowedConnections) == false)
+            {
+                return EXIT_FAILURE;
+            }
+            pieces[loc].leftConnection = *token;
+        }
+        else if (curr == PIECE_RIGHT_CONNECTION_LOC)
+        {
+            if (checkConnection(token, allowedConnections) == false)
+            {
+                return EXIT_FAILURE;
+            }
+            pieces[loc].rightConnection = *token;
+        }
+        else if (curr == PIECE_QUANTITY_LOC)
+        {
+            if (stringToInt(token) == STRING_INT_CONVERSION_ERROR)
+            {
+                return EXIT_FAILURE;
+            }
+            pieces[loc].quantity = stringToInt(token);
+        }
+        else
+        {
+            if (stringToInt(token) == STRING_INT_CONVERSION_ERROR)
+            {
+                return EXIT_FAILURE;
+            }
+            pieces[loc].price = stringToInt(token)  ;
+        }
+
+        token = strtok(0, ",");
+        curr++;
     }
 
     return NO_ERROR;
@@ -110,8 +175,10 @@ void getUserData(const char *fileLocation)
     FILE *file = getFile(fileLocation, READ_FILE);
     char line[MAX_LINE_LEN];
     long lineNumber = 1;
-    RailWayPlanner rail;
     int lineError = NO_ERROR;
+    RailWayPlanner rail;
+    Piece *pieces = (Piece *)malloc(sizeof(Piece));
+    rail.numPieces = 1;
 
     while (fgets(line, sizeof(line), file) != NULL)
     {
@@ -119,7 +186,7 @@ void getUserData(const char *fileLocation)
 
         if (lineNumber == FILE_RAIL_LENGTH_LINE)
         {
-            if (stringToInt(line) == FAILED_COMMAND)
+            if (stringToInt(line) == STRING_INT_CONVERSION_ERROR)
             {
                 writeToFile(INVALID_INPUT_ERROR);
                 lineError = FILE_RAIL_LENGTH_LINE;
@@ -128,7 +195,7 @@ void getUserData(const char *fileLocation)
         }
         else if (lineNumber == FILE_NUM_CONNECTIONS_LINE)
         {
-            if (stringToInt(line) == FAILED_COMMAND)
+            if (stringToInt(line) == STRING_INT_CONVERSION_ERROR)
             {
                 writeToFile(INVALID_INPUT_ERROR);
                 lineError = FILE_NUM_CONNECTIONS_LINE;
@@ -138,7 +205,7 @@ void getUserData(const char *fileLocation)
         else if (lineNumber == FILE_CONNECTIONS_TYPE_LINE)
         {
             char *connections = (char *)malloc(rail.numConnections * sizeof(char));
-            if (getRailConnections(line, rail.numConnections, connections) == FAILED_COMMAND)
+            if (getRailConnections(line, connections) == EXIT_FAILURE)
             {
                 writeToFile(INVALID_INPUT_ERROR);
                 lineError = FILE_CONNECTIONS_TYPE_LINE;
@@ -147,11 +214,26 @@ void getUserData(const char *fileLocation)
         }
         else
         {
-            continue;
+            if (lineNumber == 5)
+            {
+                int i = 0;
+            }
+            if (getPiece(line, pieces, rail.numPieces - 1, rail.connectionsAllowed) == EXIT_FAILURE)
+            {
+                writeToFile(INVALID_INPUT_ERROR);
+                lineError = lineNumber;
+            }
+            rail.numPieces++;
+            pieces = (Piece *)realloc(pieces, sizeof(Piece) * rail.numPieces);
         }
         lineNumber ++;
     }
-    printf("%s", rail.connectionsAllowed);
+    rail.pieces = pieces;
+    rail.numPieces--;
+    for (int i = 0; i < rail.numPieces; i++)
+    {
+        printf("%c,%c,%d,%d\n", rail.pieces[i].leftConnection, rail.pieces[i].rightConnection, rail.pieces[i].quantity, rail.pieces[i].price);
+    }
     fclose(file);
 }
 
