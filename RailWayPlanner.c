@@ -311,15 +311,6 @@ int *buildTable(const RailWayPlanner *rail)
         }
     }
     return mat;
-    /**
-    for (int i = 0; i < rail->length + 1; i++)
-    {
-        for (int j = 0; j < rail->numConnections; j ++)
-        {
-            printf("%d ", mat[i * rail->numConnections + j]);
-        }
-        printf("\n");
-    }*/
 }
 
 int findCheapestBuild(const int *table, const RailWayPlanner *rail)
