@@ -254,6 +254,13 @@ void getUserData(const char *fileLocation, RailWayPlanner *rail)
 
         lineNumber ++;
     }
+    // we know that the file was empty
+    if (lineNumber == 1)
+    {
+        writeToFile(FILE_EMPTY_ERROR);
+        fclose(file);
+        exit(EXIT_FAILURE);
+    }
     rail->pieces = pieces;
     rail->numPieces--;
 
@@ -349,11 +356,15 @@ int main(int argc, char *argv[])
         writeToFile(FILE_EXIST_ERROR);
         exit(EXIT_FAILURE);
     }
+    
     RailWayPlanner rail;
     getUserData(argv[1], &rail);
     int *table = buildTable(&rail);
     int cheapest = findCheapestBuild(table, &rail);
     writeCheapPrice(cheapest);
+
+    freeRailWayPlanner(&rail);
+    free(table);
 
     return EXIT_SUCCESS;
 }
