@@ -25,16 +25,14 @@
 #define STRING_INT_CONVERSION_ERROR -1
 #define NO_ERROR 0
 
-typedef struct Piece
-{
+typedef struct Piece{
     int price;
     int length;
     char rightConnection;
     char leftConnection;
 }Piece;
 
-typedef struct RailWayPlanner
-{
+typedef struct RailWayPlanner{
     int length;
     int numConnections;
     char *connectionsAllowed;
@@ -113,7 +111,7 @@ int getRailConnections(char line[], char *connections)
 
 bool checkConnection(const char *connection, const char *allowedConnections)
 {
-    for (int i = 0; i < strlen(allowedConnections); i++)
+    for (size_t i = 0; i < strlen(allowedConnections); i++)
     {
         if (*connection == allowedConnections[i])
         {
@@ -125,7 +123,8 @@ bool checkConnection(const char *connection, const char *allowedConnections)
 
 int getPiece(char line[], Piece *pieces, const int loc, const char *allowedConnections)
 {
-    char *token = strtok(line, ",");
+    char *token = NULL;
+    token = strtok(line, ",");
     int curr = 1;
 
     while (token != NULL)
@@ -172,17 +171,7 @@ int getPiece(char line[], Piece *pieces, const int loc, const char *allowedConne
 
 void freeRailWayPlanner(RailWayPlanner *railWay)
 {
-    /**
-    for (int i = 0; i < railWay->numConnections; i++)
-    {
-        free(&(railWay->connectionsAllowed[i]));
-    }*/
     free(railWay->connectionsAllowed);
-    /**
-    for (int i = 0; i < railWay->numPieces; i++)
-    {
-        free(&(railWay->pieces[i]));
-    }*/
     free((railWay->pieces));
 }
 
@@ -202,6 +191,7 @@ void getUserData(const char *fileLocation, RailWayPlanner *rail)
     int lineError = NO_ERROR;
     Piece *pieces = (Piece *)malloc(sizeof(Piece));
     rail->numPieces = 1;
+    rail->connectionsAllowed = NULL;
 
     while (fgets(line, sizeof(line), file) != NULL)
     {
@@ -225,7 +215,7 @@ void getUserData(const char *fileLocation, RailWayPlanner *rail)
         }
         else if (lineNumber == FILE_CONNECTIONS_TYPE_LINE)
         {
-            char *connections = (char *)malloc(rail->numConnections * sizeof(char));
+            char *connections = (char *)calloc(rail->numConnections + 1, sizeof(char));
             if (getRailConnections(line, connections) == EXIT_FAILURE)
             {
                 lineError = FILE_CONNECTIONS_TYPE_LINE;
@@ -234,7 +224,6 @@ void getUserData(const char *fileLocation, RailWayPlanner *rail)
         }
         else
         {
-
             if (getPiece(line, pieces, rail->numPieces - 1, rail->connectionsAllowed) == EXIT_FAILURE)
             {
                 lineError = lineNumber;
@@ -259,6 +248,7 @@ void getUserData(const char *fileLocation, RailWayPlanner *rail)
     {
         writeToFile(FILE_EMPTY_ERROR);
         fclose(file);
+        freeRailWayPlanner(rail);
         exit(EXIT_FAILURE);
     }
     rail->pieces = pieces;
