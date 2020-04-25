@@ -15,7 +15,6 @@
 #define PIECE_LEFT_CONNECTION_LOC 1
 #define PIECE_RIGHT_CONNECTION_LOC 2
 #define PIECE_QUANTITY_LOC 3
-#define PIECE_PRICE_LOC 4
 #define TOKEN_LENGTH 1
 
 #define USAGE_ERROR "Usage: RailWayPlanner <InputFile>"
@@ -28,7 +27,7 @@
 typedef struct Piece
 {
     int price;
-    int quantity;
+    int length;
     char rightConnection;
     char leftConnection;
 }Piece;
@@ -152,7 +151,7 @@ int getPiece(char line[], Piece *pieces, const int loc, const char *allowedConne
             {
                 return EXIT_FAILURE;
             }
-            pieces[loc].quantity = stringToInt(token);
+            pieces[loc].length = stringToInt(token);
         }
         else
         {
@@ -261,9 +260,65 @@ void getUserData(const char *fileLocation, RailWayPlanner *rail)
     fclose(file);
 }
 
+int findCheapest(const int *mat, RailWayPlanner *rail, int endingChar, int lenWanted)
+{
+    int cheapestPrice = INT_MAX;
+    for (int i = 0; i < rail->numPieces; i++)
+    {
+        if (rail->pieces[i].rightConnection == rail->connectionsAllowed[endingChar] && rail->pieces[i].length <= lenWanted)
+        {
+            int lenSearching = lenWanted - rail->pieces[i].length;
+            for (int j = 0; j < rail->numConnections; j++)
+            {
+                if (rail->conn[j].leftConnection == rail->pieces[i].leftConnection)
+                {
+                    int price = 0;
+                    int correspondingMatPlace = rail->numConnections * lenSearching + j;
+                    if (mat[correspondingMatPlace] != INT_MAX)
+                    {
+                        price = mat[correspondingMatPlace] + rail->pieces[i].price;
+                    } else
+                    {
+                        price = rail->pieces[i].price;
+                    }
+                    if (price < cheapestPrice)
+                    {
+                        cheapestPrice = price;
+                    }
+                }
+            }
+        }
+
+    }
+    return cheapestPrice;
+}
+
 void buildTable(RailWayPlanner *rail)
 {
+    int *mat;
+    mat = (int *)malloc(rail->numPieces * rail->numConnections * sizeof(int));
+    //CharToNumDict *charNumDict = (CharToNumDict *)malloc(rail->numConnections * sizeof(CharToNumDict));
+    //0
+    for (int i = 0; i < rail->numConnections; i++)
+    {
+        mat[i] = 0;
+    }
+    for (int len = 1; len <= rail->length; len++)
+    {
+        for (int endingChar = 0; endingChar < rail->numConnections; endingChar++)
+        {
+            mat[len * rail->numConnections + endingChar] = findCheapest(mat, rail, endingChar, len);
+        }
+    }
 
+    for (int i = 0; i < rail->length + 1; i++)
+    {
+        for (int j = 0; j < rail->numConnections; j ++)
+        {
+            printf("%d ", mat[i * rail->numConnections + j]);
+        }
+        printf("\n");
+    }
 }
 
 int main(int argc, char *argv[])
@@ -281,6 +336,7 @@ int main(int argc, char *argv[])
     }
     RailWayPlanner rail;
     getUserData(argv[1], &rail);
+    buildTable(&rail);
 
     return 0;
 }
