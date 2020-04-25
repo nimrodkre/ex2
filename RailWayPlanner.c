@@ -22,6 +22,7 @@
 #define FILE_EMPTY_ERROR "File is empty."
 #define INVALID_INPUT_ERROR "Invalid input in line: "
 #define MINIMUM_PRICE_FILE "The minimal price is: "
+#define NO_POSSIBLE_RAIL -1
 #define STRING_INT_CONVERSION_ERROR -1
 #define NO_ERROR 0
 
@@ -119,6 +120,8 @@ void removeEnter(char line[])
  */
 int stringToInt(const char line[])
 {
+    long result = 0;
+    char *eptr = NULL;
     unsigned long len = strlen(line);
     for (unsigned long i = 0; i < len; i++)
     {
@@ -127,7 +130,16 @@ int stringToInt(const char line[])
             return STRING_INT_CONVERSION_ERROR;
         }
     }
-    return atoi(line);
+    if (line[0] == '0')
+    {
+        return 0;
+    }
+    result  = strtol(line,  &eptr, 10);
+    if(result == 0)
+    {
+        return STRING_INT_CONVERSION_ERROR;
+    }
+    return (int)result;
 }
 
 /**
@@ -433,7 +445,15 @@ void writeCheapPrice(const int price)
 {
     FILE *file = getFile(OUTPUT_FILE, WRITE_FILE);
     fputs(MINIMUM_PRICE_FILE, file);
-    fprintf(file, "%d", price);
+    if (price < 0 || price == INT_MAX)
+    {
+        fprintf(file, "%d", NO_POSSIBLE_RAIL);
+    }
+    else
+    {
+        fprintf(file, "%d", price);
+    }
+
     fclose(file);
 }
 
