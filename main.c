@@ -270,7 +270,7 @@ int findCheapest(const int *mat, RailWayPlanner *rail, int endingChar, int lenWa
             int lenSearching = lenWanted - rail->pieces[i].length;
             for (int j = 0; j < rail->numConnections; j++)
             {
-                if (rail->conn[j].leftConnection == rail->pieces[i].leftConnection)
+                if (rail->connectionsAllowed[j] == rail->pieces[i].leftConnection && mat[rail->numConnections * lenSearching + j] != INT_MAX)
                 {
                     int price = 0;
                     int correspondingMatPlace = rail->numConnections * lenSearching + j;
