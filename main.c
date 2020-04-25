@@ -21,6 +21,7 @@
 #define FILE_EXIST_ERROR "File doesn't exists."
 #define FILE_EMPTY_ERROR "File is empty." //TODO: TAKE CARE
 #define INVALID_INPUT_ERROR "Invalid input in line: " //TODO: Check if lond is needed
+#define MINIMUM_PRICE_FILE "The minimal price is: "
 #define STRING_INT_CONVERSION_ERROR -1
 #define NO_ERROR 0
 
@@ -191,7 +192,6 @@ void userDataError(const int lineNumber)
     fputs(INVALID_INPUT_ERROR, file);
     fprintf(file, "%d", lineNumber);
     fclose(file);
-
 }
 
 void getUserData(const char *fileLocation, RailWayPlanner *rail)
@@ -287,12 +287,11 @@ int findCheapest(const int *mat, RailWayPlanner *rail, int endingChar, int lenWa
     return cheapestPrice;
 }
 
-void buildTable(RailWayPlanner *rail)
+int *buildTable(RailWayPlanner *rail)
 {
     int *mat;
     mat = (int *)malloc(rail->numPieces * rail->numConnections * sizeof(int));
-    //CharToNumDict *charNumDict = (CharToNumDict *)malloc(rail->numConnections * sizeof(CharToNumDict));
-    //0
+
     for (int i = 0; i < rail->numConnections; i++)
     {
         mat[i] = 0;
@@ -304,7 +303,8 @@ void buildTable(RailWayPlanner *rail)
             mat[len * rail->numConnections + endingChar] = findCheapest(mat, rail, endingChar, len);
         }
     }
-
+    return mat;
+    /**
     for (int i = 0; i < rail->length + 1; i++)
     {
         for (int j = 0; j < rail->numConnections; j ++)
@@ -312,7 +312,28 @@ void buildTable(RailWayPlanner *rail)
             printf("%d ", mat[i * rail->numConnections + j]);
         }
         printf("\n");
+    }*/
+}
+
+int findCheapestBuild(int *table, const RailWayPlanner *rail)
+{
+    int cheapest = INT_MAX;
+    for (int endingChar = 0; endingChar < rail->numConnections; endingChar++)
+    {
+        if (table[rail->length * rail->numConnections + endingChar] < cheapest)
+        {
+            cheapest = table[rail->length * rail->numConnections + endingChar];
+        }
     }
+    return cheapest;
+}
+
+void writeCheapPrice(int price)
+{
+    FILE *file = getFile(OUTPUT_FILE, WRITE_FILE);
+    fputs(MINIMUM_PRICE_FILE, file);
+    fprintf(file, "%d", price);
+    fclose(file);
 }
 
 int main(int argc, char *argv[])
@@ -330,7 +351,9 @@ int main(int argc, char *argv[])
     }
     RailWayPlanner rail;
     getUserData(argv[1], &rail);
-    buildTable(&rail);
+    int *table = buildTable(&rail);
+    int cheapest = findCheapestBuild(table, &rail);
+    writeCheapPrice(cheapest);
 
-    return 0;
+    return EXIT_SUCCESS;
 }
