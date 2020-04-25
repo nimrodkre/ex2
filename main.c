@@ -21,7 +21,7 @@
 #define USAGE_ERROR "Usage: RailWayPlanner <InputFile>"
 #define FILE_EXIST_ERROR "File doesn't exists."
 #define FILE_EMPTY_ERROR "File is empty." //TODO: TAKE CARE
-#define INVALID_INPUT_ERROR "Invalid input in line: %d" //TODO: Check if lond is needed
+#define INVALID_INPUT_ERROR "Invalid input in line: " //TODO: Check if lond is needed
 #define STRING_INT_CONVERSION_ERROR -1
 #define NO_ERROR 0
 
@@ -170,11 +170,36 @@ int getPiece(char line[], Piece *pieces, const int loc, const char *allowedConne
     return NO_ERROR;
 }
 
+void freeRailWayPlanner(RailWayPlanner *railWay)
+{
+    /**
+    for (int i = 0; i < railWay->numConnections; i++)
+    {
+        free(&(railWay->connectionsAllowed[i]));
+    }*/
+    free(railWay->connectionsAllowed);
+    /**
+    for (int i = 0; i < railWay->numPieces; i++)
+    {
+        free(&(railWay->pieces[i]));
+    }*/
+    free((railWay->pieces));
+}
+
+void userDataError(const int lineNumber)
+{
+    FILE *file = getFile(OUTPUT_FILE, WRITE_FILE);
+    fputs(INVALID_INPUT_ERROR, file);
+    fprintf(file, "%d", lineNumber);
+    fclose(file);
+
+}
+
 void getUserData(const char *fileLocation)
 {
     FILE *file = getFile(fileLocation, READ_FILE);
     char line[MAX_LINE_LEN];
-    long lineNumber = 1;
+    int lineNumber = 1;
     int lineError = NO_ERROR;
     RailWayPlanner rail;
     Piece *pieces = (Piece *)malloc(sizeof(Piece));
@@ -188,7 +213,6 @@ void getUserData(const char *fileLocation)
         {
             if (stringToInt(line) == STRING_INT_CONVERSION_ERROR)
             {
-                writeToFile(INVALID_INPUT_ERROR);
                 lineError = FILE_RAIL_LENGTH_LINE;
             }
             rail.length = stringToInt(line);
@@ -197,7 +221,6 @@ void getUserData(const char *fileLocation)
         {
             if (stringToInt(line) == STRING_INT_CONVERSION_ERROR)
             {
-                writeToFile(INVALID_INPUT_ERROR);
                 lineError = FILE_NUM_CONNECTIONS_LINE;
             }
             rail.numConnections = stringToInt(line);
@@ -207,33 +230,34 @@ void getUserData(const char *fileLocation)
             char *connections = (char *)malloc(rail.numConnections * sizeof(char));
             if (getRailConnections(line, connections) == EXIT_FAILURE)
             {
-                writeToFile(INVALID_INPUT_ERROR);
                 lineError = FILE_CONNECTIONS_TYPE_LINE;
             }
             rail.connectionsAllowed = connections;
         }
         else
         {
-            if (lineNumber == 5)
-            {
-                int i = 0;
-            }
+
             if (getPiece(line, pieces, rail.numPieces - 1, rail.connectionsAllowed) == EXIT_FAILURE)
             {
-                writeToFile(INVALID_INPUT_ERROR);
                 lineError = lineNumber;
             }
             rail.numPieces++;
             pieces = (Piece *)realloc(pieces, sizeof(Piece) * rail.numPieces);
         }
+
+        if (lineError != NO_ERROR)
+        {
+            rail.pieces = pieces;
+            freeRailWayPlanner(&rail);
+            userDataError(lineError);
+            return;
+        }
+
         lineNumber ++;
     }
     rail.pieces = pieces;
     rail.numPieces--;
-    for (int i = 0; i < rail.numPieces; i++)
-    {
-        printf("%c,%c,%d,%d\n", rail.pieces[i].leftConnection, rail.pieces[i].rightConnection, rail.pieces[i].quantity, rail.pieces[i].price);
-    }
+
     fclose(file);
 }
 
@@ -251,7 +275,6 @@ int main(int argc, char *argv[])
         exit(EXIT_FAILURE);
     }
     getUserData(argv[1]);
-    writeToFile("hello");
 
     return 0;
 }
