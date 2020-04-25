@@ -14,7 +14,7 @@
 #define FILE_CONNECTIONS_TYPE_LINE 3
 #define PIECE_LEFT_CONNECTION_LOC 1
 #define PIECE_RIGHT_CONNECTION_LOC 2
-#define PIECE_QUANTITY_LOC 3
+#define PIECE_LENGTH_LOC 3
 #define TOKEN_LENGTH 1
 
 #define USAGE_ERROR "Usage: RailWayPlanner <InputFile>"
@@ -217,9 +217,9 @@ int getPiece(char line[], Piece *pieces, const int loc, const char *allowedConne
             }
             pieces[loc].rightConnection = *token;
         }
-        else if (curr == PIECE_QUANTITY_LOC)
+        else if (curr == PIECE_LENGTH_LOC)
         {
-            if (stringToInt(token) == STRING_INT_CONVERSION_ERROR)
+            if (stringToInt(token) == STRING_INT_CONVERSION_ERROR || stringToInt(token) == 0)
             {
                 return EXIT_FAILURE;
             }
