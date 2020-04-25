@@ -274,7 +274,7 @@ void getUserData(const char *fileLocation, RailWayPlanner *rail)
     char line[MAX_LINE_LEN];
     int lineNumber = 1;
     int lineError = NO_ERROR;
-    Piece *pieces = (Piece *)malloc(sizeof(Piece));
+    Piece *pieces = (Piece *)calloc(1, sizeof(Piece));
     rail->numPieces = 1;
     rail->connectionsAllowed = NULL;
 
@@ -402,7 +402,7 @@ int findCheapest(const int *mat, const RailWayPlanner *rail, const int endingCha
 int *buildTable(const RailWayPlanner *rail)
 {
     int *mat;
-    mat = (int *)malloc(rail->numPieces * rail->numConnections * sizeof(int));
+    mat = (int *)calloc((rail->length + 1) * rail->numConnections, sizeof(int));
 
     for (int i = 0; i < rail->numConnections; i++)
     {
@@ -453,7 +453,6 @@ void writeCheapPrice(const int price)
     {
         fprintf(file, "%d", price);
     }
-
     fclose(file);
 }
 
