@@ -195,15 +195,14 @@ void userDataError(const int lineNumber)
 
 }
 
-void getUserData(const char *fileLocation)
+void getUserData(const char *fileLocation, RailWayPlanner *rail)
 {
     FILE *file = getFile(fileLocation, READ_FILE);
     char line[MAX_LINE_LEN];
     int lineNumber = 1;
     int lineError = NO_ERROR;
-    RailWayPlanner rail;
     Piece *pieces = (Piece *)malloc(sizeof(Piece));
-    rail.numPieces = 1;
+    rail->numPieces = 1;
 
     while (fgets(line, sizeof(line), file) != NULL)
     {
@@ -215,7 +214,7 @@ void getUserData(const char *fileLocation)
             {
                 lineError = FILE_RAIL_LENGTH_LINE;
             }
-            rail.length = stringToInt(line);
+            rail->length = stringToInt(line);
         }
         else if (lineNumber == FILE_NUM_CONNECTIONS_LINE)
         {
@@ -223,42 +222,48 @@ void getUserData(const char *fileLocation)
             {
                 lineError = FILE_NUM_CONNECTIONS_LINE;
             }
-            rail.numConnections = stringToInt(line);
+            rail->numConnections = stringToInt(line);
         }
         else if (lineNumber == FILE_CONNECTIONS_TYPE_LINE)
         {
-            char *connections = (char *)malloc(rail.numConnections * sizeof(char));
+            char *connections = (char *)malloc(rail->numConnections * sizeof(char));
             if (getRailConnections(line, connections) == EXIT_FAILURE)
             {
                 lineError = FILE_CONNECTIONS_TYPE_LINE;
             }
-            rail.connectionsAllowed = connections;
+            rail->connectionsAllowed = connections;
         }
         else
         {
 
-            if (getPiece(line, pieces, rail.numPieces - 1, rail.connectionsAllowed) == EXIT_FAILURE)
+            if (getPiece(line, pieces, rail->numPieces - 1, rail->connectionsAllowed) == EXIT_FAILURE)
             {
                 lineError = lineNumber;
             }
-            rail.numPieces++;
-            pieces = (Piece *)realloc(pieces, sizeof(Piece) * rail.numPieces);
+            rail->numPieces++;
+            pieces = (Piece *)realloc(pieces, sizeof(Piece) * rail->numPieces);
         }
 
         if (lineError != NO_ERROR)
         {
-            rail.pieces = pieces;
-            freeRailWayPlanner(&rail);
+            rail->pieces = pieces;
+            freeRailWayPlanner(rail);
             userDataError(lineError);
-            return;
+            fclose(file);
+            exit(EXIT_FAILURE);
         }
 
         lineNumber ++;
     }
-    rail.pieces = pieces;
-    rail.numPieces--;
+    rail->pieces = pieces;
+    rail->numPieces--;
 
     fclose(file);
+}
+
+void buildTable(RailWayPlanner *rail)
+{
+
 }
 
 int main(int argc, char *argv[])
@@ -274,7 +279,8 @@ int main(int argc, char *argv[])
         writeToFile(FILE_EXIST_ERROR);
         exit(EXIT_FAILURE);
     }
-    getUserData(argv[1]);
+    RailWayPlanner rail;
+    getUserData(argv[1], &rail);
 
     return 0;
 }
