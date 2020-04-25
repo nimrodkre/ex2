@@ -25,14 +25,30 @@
 #define STRING_INT_CONVERSION_ERROR -1
 #define NO_ERROR 0
 
-typedef struct Piece{
+/**
+ * holds the data of the piece
+ * price - int
+ * length - int
+ * rightConnection - string
+ * leftConnection - string
+ */
+typedef struct Piece
+{
     int price;
     int length;
     char rightConnection;
     char leftConnection;
 }Piece;
 
-typedef struct RailWayPlanner{
+/**
+ * length - int
+ * numConnections - int
+ * connectionsAllowed - string
+ * pieces - array of Piece
+ * numPieces - int
+ */
+typedef struct RailWayPlanner
+{
     int length;
     int numConnections;
     char *connectionsAllowed;
@@ -40,6 +56,12 @@ typedef struct RailWayPlanner{
     int numPieces;
 }RailWayPlanner;
 
+/**
+ * open a file in the desired location and returns it
+ * @param fileLocation a string with the location of the wanted file
+ * @param type the type of opening - string
+ * @return the file
+ */
 FILE *getFile(const char *fileLocation, char *type)
 {
     FILE *fPtr = fopen(fileLocation, type);
@@ -50,6 +72,11 @@ FILE *getFile(const char *fileLocation, char *type)
     return fPtr;
 }
 
+/**
+ * Checks if in the given location there's a file
+ * @param fileLocation the location of the wanted file
+ * @return boolean true or false
+ */
 bool checkFileExists(const char *fileLocation)
 {
     FILE *fPtr = fopen(fileLocation, "r");
@@ -61,6 +88,10 @@ bool checkFileExists(const char *fileLocation)
     return true;
 }
 
+/**
+ * writes to the output file the wanted string
+ * @param data the data to write
+ */
 void writeToFile(const char *data)
 {
     FILE *file = getFile(OUTPUT_FILE, WRITE_FILE);
@@ -68,6 +99,10 @@ void writeToFile(const char *data)
     fclose(file);
 }
 
+/**
+ * removes \n from the string
+ * @param line the line from which to remove the enter
+ */
 void removeEnter(char line[])
 {
     unsigned long ln = strlen(line) - 1;
@@ -77,6 +112,11 @@ void removeEnter(char line[])
     }
 }
 
+/**
+ * converts string to int
+ * @param line the string to convert
+ * @return if not able returns -1 else returns the int
+ */
 int stringToInt(const char line[])
 {
     unsigned long len = strlen(line);
@@ -90,6 +130,12 @@ int stringToInt(const char line[])
     return atoi(line);
 }
 
+/**
+ * from the given line finds the connections of the railroad and puts them in the array
+ * @param line the line from which to read the connections
+ * @param connections the array of connections to fill
+ * @return failure or no error
+ */
 int getRailConnections(char line[], char *connections)
 {
     char *token = strtok(line, ",");
@@ -109,6 +155,12 @@ int getRailConnections(char line[], char *connections)
     return NO_ERROR;
 }
 
+/**
+ * Checks if the given connecition is in the array of connections
+ * @param connection the connection to check
+ * @param allowedConnections array of allowed connections
+ * @return true is in else false
+ */
 bool checkConnection(const char *connection, const char *allowedConnections)
 {
     for (size_t i = 0; i < strlen(allowedConnections); i++)
@@ -121,6 +173,14 @@ bool checkConnection(const char *connection, const char *allowedConnections)
     return false;
 }
 
+/**
+ * From the line, is able to get all data of piece
+ * @param line the line to read
+ * @param pieces the array of pieces which have already been found
+ * @param loc the index of the piece which we will build
+ * @param allowedConnections a list with all legal connections for our pieces
+ * @return FAILURE OR NO ERROR
+ */
 int getPiece(char line[], Piece *pieces, const int loc, const char *allowedConnections)
 {
     char *token = NULL;
@@ -169,12 +229,20 @@ int getPiece(char line[], Piece *pieces, const int loc, const char *allowedConne
     return NO_ERROR;
 }
 
+/**
+ * frees the given railway from the heap
+ * @param railWay a pointer to the railway to free
+ */
 void freeRailWayPlanner(RailWayPlanner *railWay)
 {
     free(railWay->connectionsAllowed);
     free((railWay->pieces));
 }
 
+/**
+ * prints user data error - from line 4 and onwards
+ * @param lineNumber the line number in which there was an error
+ */
 void userDataError(const int lineNumber)
 {
     FILE *file = getFile(OUTPUT_FILE, WRITE_FILE);
@@ -183,6 +251,11 @@ void userDataError(const int lineNumber)
     fclose(file);
 }
 
+/**
+ * reads user data from the given file
+ * @param fileLocation the location of the user file given to us
+ * @param rail a pointer to RailWayPlanner which we would like to fill up from the data of the file
+ */
 void getUserData(const char *fileLocation, RailWayPlanner *rail)
 {
     FILE *file = getFile(fileLocation, READ_FILE);
@@ -257,25 +330,50 @@ void getUserData(const char *fileLocation, RailWayPlanner *rail)
     fclose(file);
 }
 
+/**
+ * returns the minimum value between the given two
+ * @param a first int
+ * @param b second int
+ * @return the minimum int between the 2
+ */
+int min(int a, int b)
+{
+    if (a < b)
+    {
+        return a;
+    }
+    return b;
+}
+
+/**
+ * algorithm which calculates the cheapest possible rail to build with the given parameters
+ * @param mat out table built till now
+ * @param rail pointer to RailWatPlanner
+ * @param endingChar the ending char with which we want to finish our railway
+ * @param lenWanted the length of the wanted railway
+ * @return the cheapest price found
+ */
 int findCheapest(const int *mat, const RailWayPlanner *rail, const int endingChar, const int lenWanted)
 {
     int cheapestPrice = INT_MAX;
     for (int i = 0; i < rail->numPieces; i++)
     {
-        if (rail->pieces[i].rightConnection == rail->connectionsAllowed[endingChar] && rail->pieces[i].length <= lenWanted)
+        // if piece looks okay - length is smaller than needed and connection is as needed
+        if (rail->pieces[i].rightConnection == rail->connectionsAllowed[endingChar] &&
+            rail->pieces[i].length <= lenWanted)
         {
             int lenSearching = lenWanted - rail->pieces[i].length;
+            // try to find a railway which corresponds
             for (int j = 0; j < rail->numConnections; j++)
             {
-                if (rail->connectionsAllowed[j] == rail->pieces[i].leftConnection && mat[rail->numConnections * lenSearching + j] != INT_MAX)
+                // make sure that our starting point is okay, and that according to the table it's legal to do
+                if (rail->connectionsAllowed[j] == rail->pieces[i].leftConnection &&
+                    mat[rail->numConnections * lenSearching + j] != INT_MAX)
                 {
                     int correspondingMatPlace = rail->numConnections * lenSearching + j;
                     int price = mat[correspondingMatPlace] + rail->pieces[i].price;
 
-                    if (price < cheapestPrice)
-                    {
-                        cheapestPrice = price;
-                    }
+                    cheapestPrice = min(cheapestPrice, price);
                 }
             }
         }
@@ -284,6 +382,11 @@ int findCheapest(const int *mat, const RailWayPlanner *rail, const int endingCha
     return cheapestPrice;
 }
 
+/**
+ * builds a table as explained in the exercise
+ * @param rail a pointer to RailWayPointer
+ * @return a pointer to the table
+ */
 int *buildTable(const RailWayPlanner *rail)
 {
     int *mat;
@@ -303,6 +406,12 @@ int *buildTable(const RailWayPlanner *rail)
     return mat;
 }
 
+/**
+ * from the given table finds the cheapest possible way to build the railway
+ * @param table the table build
+ * @param rail pointer to RailWayPointer
+ * @return the cheapest possible price
+ */
 int findCheapestBuild(const int *table, const RailWayPlanner *rail)
 {
     int cheapest = INT_MAX;
@@ -316,6 +425,10 @@ int findCheapestBuild(const int *table, const RailWayPlanner *rail)
     return cheapest;
 }
 
+/**
+ * writes the cheapest price possible to the output file
+ * @param price the cheapest price
+ */
 void writeCheapPrice(const int price)
 {
     FILE *file = getFile(OUTPUT_FILE, WRITE_FILE);
@@ -324,6 +437,12 @@ void writeCheapPrice(const int price)
     fclose(file);
 }
 
+/**
+ * main function and the brain of the program
+ * @param argc number of the arguments received
+ * @param argv the arguments received
+ * @return SUCCESS or FAILURE
+ */
 int main(int argc, char *argv[])
 {
     if (argc != USAGE_ARGUMENTS)
