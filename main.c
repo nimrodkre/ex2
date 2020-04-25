@@ -19,8 +19,8 @@
 
 #define USAGE_ERROR "Usage: RailWayPlanner <InputFile>"
 #define FILE_EXIST_ERROR "File doesn't exists."
-#define FILE_EMPTY_ERROR "File is empty." //TODO: TAKE CARE
-#define INVALID_INPUT_ERROR "Invalid input in line: " //TODO: Check if lond is needed
+#define FILE_EMPTY_ERROR "File is empty."
+#define INVALID_INPUT_ERROR "Invalid input in line: "
 #define MINIMUM_PRICE_FILE "The minimal price is: "
 #define STRING_INT_CONVERSION_ERROR -1
 #define NO_ERROR 0
@@ -267,7 +267,7 @@ void getUserData(const char *fileLocation, RailWayPlanner *rail)
     fclose(file);
 }
 
-int findCheapest(const int *mat, RailWayPlanner *rail, int endingChar, int lenWanted)
+int findCheapest(const int *mat, const RailWayPlanner *rail, const int endingChar, const int lenWanted)
 {
     int cheapestPrice = INT_MAX;
     for (int i = 0; i < rail->numPieces; i++)
@@ -294,7 +294,7 @@ int findCheapest(const int *mat, RailWayPlanner *rail, int endingChar, int lenWa
     return cheapestPrice;
 }
 
-int *buildTable(RailWayPlanner *rail)
+int *buildTable(const RailWayPlanner *rail)
 {
     int *mat;
     mat = (int *)malloc(rail->numPieces * rail->numConnections * sizeof(int));
@@ -322,7 +322,7 @@ int *buildTable(RailWayPlanner *rail)
     }*/
 }
 
-int findCheapestBuild(int *table, const RailWayPlanner *rail)
+int findCheapestBuild(const int *table, const RailWayPlanner *rail)
 {
     int cheapest = INT_MAX;
     for (int endingChar = 0; endingChar < rail->numConnections; endingChar++)
@@ -335,7 +335,7 @@ int findCheapestBuild(int *table, const RailWayPlanner *rail)
     return cheapest;
 }
 
-void writeCheapPrice(int price)
+void writeCheapPrice(const int price)
 {
     FILE *file = getFile(OUTPUT_FILE, WRITE_FILE);
     fputs(MINIMUM_PRICE_FILE, file);
@@ -356,7 +356,7 @@ int main(int argc, char *argv[])
         writeToFile(FILE_EXIST_ERROR);
         exit(EXIT_FAILURE);
     }
-    
+
     RailWayPlanner rail;
     getUserData(argv[1], &rail);
     int *table = buildTable(&rail);
