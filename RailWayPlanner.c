@@ -31,7 +31,6 @@
  * price - int
  * length - int
  * rightConnection - string
- * leftConnection - string
  * leftConnTokenNum - int with the location of the left connection in the connections array of rail
  */
 typedef struct Piece
@@ -39,7 +38,6 @@ typedef struct Piece
     int price;
     int length;
     char rightConnection;
-    char leftConnection;
     int leftConnTokenNum;
 }Piece;
 
@@ -179,12 +177,31 @@ int checkConnection(const char *connection, const char *allowedConnections)
 {
     for (size_t i = 0; i < strlen(allowedConnections); i++)
     {
-        if (*connection == allowedConnections[i])
+        if (strlen(connection) == 1 && *connection == allowedConnections[i])
         {
             return i;
         }
     }
     return NO_POSSIBLE_RAIL;
+}
+
+/**
+ * takes care of getting the left conection - special as we save the left connection location
+ * @param token token to check
+ * @param allowedConnections list of allowed connection
+ * @param pieces list with all of the pieces
+ * @param loc location of the piece in pieces to enter to
+ * @return failed or success
+ */
+int pieceGetLeftConnection(const char *token, const char *allowedConnections, Piece *pieces, const int loc)
+{
+    int connectionNum = checkConnection(token, allowedConnections);
+    if (connectionNum == NO_POSSIBLE_RAIL)
+    {
+        return NO_POSSIBLE_RAIL;
+    }
+    pieces[loc].leftConnTokenNum = connectionNum;
+    return EXIT_SUCCESS;
 }
 
 /**
@@ -205,13 +222,10 @@ int getPiece(char line[], Piece *pieces, const int loc, const char *allowedConne
     {
         if (curr == PIECE_LEFT_CONNECTION_LOC)
         {
-            int connectionNum = checkConnection(token, allowedConnections);
-            if (connectionNum == NO_POSSIBLE_RAIL)
+            if (pieceGetLeftConnection(token, allowedConnections, pieces, loc) == NO_POSSIBLE_RAIL)
             {
                 return EXIT_FAILURE;
             }
-            pieces[loc].leftConnection = *token;
-            pieces[loc].leftConnTokenNum = connectionNum;
         }
         else if (curr == PIECE_RIGHT_CONNECTION_LOC)
         {
@@ -263,7 +277,7 @@ void userDataError(const int lineNumber)
 {
     FILE *file = getFile(OUTPUT_FILE, WRITE_FILE);
     fputs(INVALID_INPUT_ERROR, file);
-    fprintf(file, "%d", lineNumber);
+    fprintf(file, "%d.", lineNumber);
     fclose(file);
 }
 
@@ -273,7 +287,7 @@ void userDataError(const int lineNumber)
  * @param line string with line
  * @return error or none
  */
-int userDataLineNumber(RailWayPlanner *rail, char *line)
+int userDataRailLength(RailWayPlanner *rail, char *line)
 {
     if (stringToInt(line) == STRING_INT_CONVERSION_ERROR)
     {
@@ -291,7 +305,7 @@ int userDataLineNumber(RailWayPlanner *rail, char *line)
  */
 int userDataNumConnections(RailWayPlanner *rail, char *line)
 {
-    if (stringToInt(line) == STRING_INT_CONVERSION_ERROR)
+    if (stringToInt(line) == STRING_INT_CONVERSION_ERROR || stringToInt(line) == 0)
     {
         return FILE_NUM_CONNECTIONS_LINE;
     }
@@ -345,11 +359,11 @@ void getUserData(const char *fileLocation, RailWayPlanner *rail)
 
         if (lineNumber == FILE_RAIL_LENGTH_LINE)
         {
-            lineError = userDataLineNumber(rail, line);
+            lineError = userDataRailLength(rail, line);
         }
         else if (lineNumber == FILE_NUM_CONNECTIONS_LINE)
         {
-            userDataNumConnections(rail, line);
+            lineError = userDataNumConnections(rail, line);
         }
         else if (lineNumber == FILE_CONNECTIONS_TYPE_LINE)
         {
@@ -397,7 +411,6 @@ void getUserData(const char *fileLocation, RailWayPlanner *rail)
     {
         writeToFile(FILE_EMPTY_ERROR);
         fclose(file);
-        freeRailWayPlanner(rail);
         exit(EXIT_FAILURE);
     }
     rail->pieces = pieces;
@@ -440,17 +453,12 @@ int findCheapest(const int *mat, const RailWayPlanner *rail, const int endingCha
         {
             int lenSearching = lenWanted - rail->pieces[i].length;
             // try to find a railway which corresponds
-            for (int j = 0; j < rail->numConnections; j++)
+            int correspondingMatPlace = rail->numConnections * lenSearching + rail->pieces[i].leftConnTokenNum;
+            // make sure that our starting point is okay, and that according to the table it's legal to do
+            if (mat[correspondingMatPlace] != INT_MAX)
             {
-                int correspondingMatPlace = rail->numConnections * lenSearching + rail->pieces[i].leftConnTokenNum;
-                // make sure that our starting point is okay, and that according to the table it's legal to do
-                if (mat[correspondingMatPlace] != INT_MAX)
-                {
-                    
-                    int price = mat[correspondingMatPlace] + rail->pieces[i].price;
-
-                    cheapestPrice = min(cheapestPrice, price);
-                }
+                int price = mat[correspondingMatPlace] + rail->pieces[i].price;
+                cheapestPrice = min(cheapestPrice, price);
             }
         }
 
