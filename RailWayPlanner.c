@@ -32,6 +32,7 @@
  * length - int
  * rightConnection - string
  * leftConnection - string
+ * leftConnTokenNum - int with the location of the left connection in the connections array of rail
  */
 typedef struct Piece
 {
@@ -39,6 +40,7 @@ typedef struct Piece
     int length;
     char rightConnection;
     char leftConnection;
+    int leftConnTokenNum;
 }Piece;
 
 /**
@@ -171,18 +173,18 @@ int getRailConnections(char line[], char *connections)
  * Checks if the given connecition is in the array of connections
  * @param connection the connection to check
  * @param allowedConnections array of allowed connections
- * @return true is in else false
+ * @return location is allowedConnection is in else -1
  */
-bool checkConnection(const char *connection, const char *allowedConnections)
+int checkConnection(const char *connection, const char *allowedConnections)
 {
     for (size_t i = 0; i < strlen(allowedConnections); i++)
     {
         if (*connection == allowedConnections[i])
         {
-            return true;
+            return i;
         }
     }
-    return false;
+    return NO_POSSIBLE_RAIL;
 }
 
 /**
@@ -203,15 +205,17 @@ int getPiece(char line[], Piece *pieces, const int loc, const char *allowedConne
     {
         if (curr == PIECE_LEFT_CONNECTION_LOC)
         {
-            if (checkConnection(token, allowedConnections) == false)
+            int connectionNum = checkConnection(token, allowedConnections);
+            if (connectionNum == NO_POSSIBLE_RAIL)
             {
                 return EXIT_FAILURE;
             }
             pieces[loc].leftConnection = *token;
+            pieces[loc].leftConnTokenNum = connectionNum;
         }
         else if (curr == PIECE_RIGHT_CONNECTION_LOC)
         {
-            if (checkConnection(token, allowedConnections) == false)
+            if (checkConnection(token, allowedConnections) == NO_POSSIBLE_RAIL)
             {
                 return EXIT_FAILURE;
             }
@@ -264,6 +268,56 @@ void userDataError(const int lineNumber)
 }
 
 /**
+ * Case of the first line in the file
+ * @param rail the rail in which to enter data
+ * @param line string with line
+ * @return error or none
+ */
+int userDataLineNumber(RailWayPlanner *rail, char *line)
+{
+    if (stringToInt(line) == STRING_INT_CONVERSION_ERROR)
+    {
+        return FILE_RAIL_LENGTH_LINE;
+    }
+    rail->length = stringToInt(line);
+    return NO_ERROR;
+}
+
+/**
+ * case of the second line in file
+ * @param rail the rail in which to enter the data
+ * @param line line string
+ * @return error or none
+ */
+int userDataNumConnections(RailWayPlanner *rail, char *line)
+{
+    if (stringToInt(line) == STRING_INT_CONVERSION_ERROR)
+    {
+        return FILE_NUM_CONNECTIONS_LINE;
+    }
+    rail->numConnections = stringToInt(line);
+    return NO_ERROR;
+}
+
+/**
+ * case of the third line
+ * @param rail the rail
+ * @param line string with line
+ * @param connections list with connections
+ * @return error or none
+ */
+int userDataRailConnections(RailWayPlanner *rail, char *line, char *connections)
+{
+    if (getRailConnections(line, connections) == EXIT_FAILURE)
+    {
+        return FILE_CONNECTIONS_TYPE_LINE;
+    }
+    rail->connectionsAllowed = connections;
+    return NO_ERROR;
+}
+
+
+/**
  * reads user data from the given file
  * @param fileLocation the location of the user file given to us
  * @param rail a pointer to RailWayPlanner which we would like to fill up from the data of the file
@@ -274,9 +328,16 @@ void getUserData(const char *fileLocation, RailWayPlanner *rail)
     char line[MAX_LINE_LEN];
     int lineNumber = 1;
     int lineError = NO_ERROR;
-    Piece *pieces = (Piece *)calloc(1, sizeof(Piece));
     rail->numPieces = 1;
     rail->connectionsAllowed = NULL;
+
+    Piece *pieces = (Piece *)calloc(1, sizeof(Piece));
+    if (pieces == NULL)
+    {
+        fclose(file);
+        exit(EXIT_FAILURE);
+    }
+
 
     while (fgets(line, sizeof(line), file) != NULL)
     {
@@ -284,27 +345,22 @@ void getUserData(const char *fileLocation, RailWayPlanner *rail)
 
         if (lineNumber == FILE_RAIL_LENGTH_LINE)
         {
-            if (stringToInt(line) == STRING_INT_CONVERSION_ERROR)
-            {
-                lineError = FILE_RAIL_LENGTH_LINE;
-            }
-            rail->length = stringToInt(line);
+            lineError = userDataLineNumber(rail, line);
         }
         else if (lineNumber == FILE_NUM_CONNECTIONS_LINE)
         {
-            if (stringToInt(line) == STRING_INT_CONVERSION_ERROR)
-            {
-                lineError = FILE_NUM_CONNECTIONS_LINE;
-            }
-            rail->numConnections = stringToInt(line);
+            userDataNumConnections(rail, line);
         }
         else if (lineNumber == FILE_CONNECTIONS_TYPE_LINE)
         {
             char *connections = (char *)calloc(rail->numConnections + 1, sizeof(char));
-            if (getRailConnections(line, connections) == EXIT_FAILURE)
+            if (connections == NULL)
             {
-                lineError = FILE_CONNECTIONS_TYPE_LINE;
+                fclose(file);
+                free(pieces);
+                exit(EXIT_FAILURE);
             }
+            lineError = userDataRailConnections(rail, line, connections);
             rail->connectionsAllowed = connections;
         }
         else
@@ -315,6 +371,14 @@ void getUserData(const char *fileLocation, RailWayPlanner *rail)
             }
             rail->numPieces++;
             pieces = (Piece *)realloc(pieces, sizeof(Piece) * rail->numPieces);
+
+            if (pieces == NULL)
+            {
+                fclose(file);
+                free(pieces);
+                free(rail->connectionsAllowed);
+                exit(EXIT_FAILURE);
+            }
         }
 
         if (lineError != NO_ERROR)
@@ -378,11 +442,11 @@ int findCheapest(const int *mat, const RailWayPlanner *rail, const int endingCha
             // try to find a railway which corresponds
             for (int j = 0; j < rail->numConnections; j++)
             {
+                int correspondingMatPlace = rail->numConnections * lenSearching + rail->pieces[i].leftConnTokenNum;
                 // make sure that our starting point is okay, and that according to the table it's legal to do
-                if (rail->connectionsAllowed[j] == rail->pieces[i].leftConnection &&
-                    mat[rail->numConnections * lenSearching + j] != INT_MAX)
+                if (mat[correspondingMatPlace] != INT_MAX)
                 {
-                    int correspondingMatPlace = rail->numConnections * lenSearching + j;
+                    
                     int price = mat[correspondingMatPlace] + rail->pieces[i].price;
 
                     cheapestPrice = min(cheapestPrice, price);
@@ -399,10 +463,16 @@ int findCheapest(const int *mat, const RailWayPlanner *rail, const int endingCha
  * @param rail a pointer to RailWayPointer
  * @return a pointer to the table
  */
-int *buildTable(const RailWayPlanner *rail)
+int *buildTable(RailWayPlanner *rail)
 {
     int *mat;
     mat = (int *)calloc((rail->length + 1) * rail->numConnections, sizeof(int));
+
+    if (mat == NULL)
+    {
+        freeRailWayPlanner(rail);
+        exit(EXIT_FAILURE);
+    }
 
     for (int i = 0; i < rail->numConnections; i++)
     {
