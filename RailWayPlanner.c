@@ -245,7 +245,7 @@ int getPiece(char line[], Piece *pieces, const int loc, const char *allowedConne
         }
         else
         {
-            if (stringToInt(token) == STRING_INT_CONVERSION_ERROR)
+            if (stringToInt(token) == STRING_INT_CONVERSION_ERROR || stringToInt(token) == 0)
             {
                 return EXIT_FAILURE;
             }
@@ -558,10 +558,9 @@ int main(int argc, char *argv[])
     getUserData(argv[1], &rail);
     int *table = buildTable(&rail);
     int cheapest = findCheapestBuild(table, &rail);
-    writeCheapPrice(cheapest);
-
     freeRailWayPlanner(&rail);
     free(table);
+    writeCheapPrice(cheapest);
 
     return EXIT_SUCCESS;
 }
