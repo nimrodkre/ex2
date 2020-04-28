@@ -68,7 +68,7 @@ FILE *getFile(const char *fileLocation, char *type)
     FILE *fPtr = fopen(fileLocation, type);
     if (fPtr == NULL)
     {
-        exit(EXIT_FAILURE);
+        return NULL;
     }
     return fPtr;
 }
@@ -96,6 +96,10 @@ bool checkFileExists(const char *fileLocation)
 void writeToFile(const char *data)
 {
     FILE *file = getFile(OUTPUT_FILE, WRITE_FILE);
+    if (file == NULL)
+    {
+        return;
+    }
     fputs(data, file);
     fclose(file);
 }
@@ -130,7 +134,7 @@ int stringToInt(const char line[])
             return STRING_INT_CONVERSION_ERROR;
         }
     }
-    if (line[0] == '0')
+    if (line[0] == '0' && len == 1)
     {
         return 0;
     }
@@ -276,6 +280,10 @@ void freeRailWayPlanner(RailWayPlanner *railWay)
 void userDataError(const int lineNumber)
 {
     FILE *file = getFile(OUTPUT_FILE, WRITE_FILE);
+    if (file == NULL)
+    {
+        return;
+    }
     fputs(INVALID_INPUT_ERROR, file);
     fprintf(file, "%d.", lineNumber);
     fclose(file);
@@ -289,11 +297,11 @@ void userDataError(const int lineNumber)
  */
 int userDataRailLength(RailWayPlanner *rail, char *line)
 {
-    if (stringToInt(line) == STRING_INT_CONVERSION_ERROR)
+    rail->length = stringToInt(line);
+    if (rail->length == STRING_INT_CONVERSION_ERROR)
     {
         return FILE_RAIL_LENGTH_LINE;
     }
-    rail->length = stringToInt(line);
     return NO_ERROR;
 }
 
@@ -305,11 +313,11 @@ int userDataRailLength(RailWayPlanner *rail, char *line)
  */
 int userDataNumConnections(RailWayPlanner *rail, char *line)
 {
-    if (stringToInt(line) == STRING_INT_CONVERSION_ERROR || stringToInt(line) == 0)
+    rail->numConnections = stringToInt(line);
+    if (rail->numConnections == STRING_INT_CONVERSION_ERROR || rail->numConnections == 0)
     {
         return FILE_NUM_CONNECTIONS_LINE;
     }
-    rail->numConnections = stringToInt(line);
     return NO_ERROR;
 }
 
@@ -399,8 +407,8 @@ void getUserData(const char *fileLocation, RailWayPlanner *rail)
         {
             rail->pieces = pieces;
             freeRailWayPlanner(rail);
-            userDataError(lineError);
             fclose(file);
+            userDataError(lineError);
             exit(EXIT_FAILURE);
         }
 
@@ -409,8 +417,8 @@ void getUserData(const char *fileLocation, RailWayPlanner *rail)
     // we know that the file was empty
     if (lineNumber == 1)
     {
-        writeToFile(FILE_EMPTY_ERROR);
         fclose(file);
+        writeToFile(FILE_EMPTY_ERROR);
         exit(EXIT_FAILURE);
     }
     rail->pieces = pieces;
@@ -522,6 +530,10 @@ int findCheapestBuild(const int *table, const RailWayPlanner *rail)
 void writeCheapPrice(const int price)
 {
     FILE *file = getFile(OUTPUT_FILE, WRITE_FILE);
+    if (file == NULL)
+    {
+        return;
+    }
     fputs(MINIMUM_PRICE_FILE, file);
     if (price < 0 || price == INT_MAX)
     {
