@@ -16,6 +16,7 @@
 #define PIECE_RIGHT_CONNECTION_LOC 2
 #define PIECE_LENGTH_LOC 3
 #define TOKEN_LENGTH 1
+#define DELIMETER ","
 
 #define USAGE_ERROR "Usage: RailWayPlanner <InputFile>"
 #define FILE_EXIST_ERROR "File doesn't exists."
@@ -154,7 +155,7 @@ int stringToInt(const char line[])
  */
 int getRailConnections(char line[], char *connections)
 {
-    char *token = strtok(line, ",");
+    char *token = strtok(line, DELIMETER);
     int curr = 0;
 
     while (token != NULL)
@@ -165,7 +166,7 @@ int getRailConnections(char line[], char *connections)
         }
         connections[curr] = *token;
         curr++;
-        token = strtok(0, ",");
+        token = strtok(0, DELIMETER);
     }
 
     return NO_ERROR;
@@ -219,7 +220,7 @@ int pieceGetLeftConnection(const char *token, const char *allowedConnections, Pi
 int getPiece(char line[], Piece *pieces, const int loc, const char *allowedConnections)
 {
     char *token = NULL;
-    token = strtok(line, ",");
+    token = strtok(line, DELIMETER);
     int curr = 1;
 
     while (token != NULL)
@@ -256,7 +257,7 @@ int getPiece(char line[], Piece *pieces, const int loc, const char *allowedConne
             pieces[loc].price = stringToInt(token)  ;
         }
 
-        token = strtok(0, ",");
+        token = strtok(0, DELIMETER);
         curr++;
     }
 
